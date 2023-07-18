@@ -1,9 +1,12 @@
 package baseapp
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
@@ -746,6 +749,16 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, re
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
 	// Result if any single message fails or does not have a registered Handler.
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
+
+	// Node writer
+	if mode == runTxModeCheck {
+
+		hex := fmt.Sprintf("%x", tmhash.Sum(txBytes))
+		fmt.Println(hex)
+
+		writeJSONToFile(tx, hex, ctx)
+	}
+
 	if err == nil {
 		// Run optional postHandlers.
 		//
@@ -774,6 +787,40 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, re
 
 	ctx.Logger().Debug("finished executing tx")
 	return gInfo, result, anteEvents, err
+}
+
+func writeJSONToFile(tx sdk.Tx, hex string, ctx sdk.Context) {
+	msgs := tx.GetMsgs()
+
+	jData, err := json.Marshal(msgs)
+	if err != nil {
+		fmt.Println("Error marshalling JSON data:", err)
+		return
+	}
+
+	jsonStr := string(jData)
+
+	_, err = os.Stat("Txs")
+	if os.IsNotExist(err) {
+		err = os.Mkdir("Txs", os.ModePerm)
+		if err != nil {
+			fmt.Println("Error creating directory:", err)
+			return
+		}
+	}
+
+	filename := "Txs/" + strconv.FormatInt(ctx.BlockHeight(), 10) + "_" + hex + ".txt"
+	f, err := os.Create(filename)
+	if err != nil {
+		fmt.Println("Error creating file:", err)
+		return
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(jsonStr)
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+	}
 }
 
 // runMsgs iterates through a list of messages and executes them with the provided

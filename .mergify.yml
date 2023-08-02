@@ -1,0 +1,88 @@
+queue_rules:
+  - name: default
+    conditions:
+      - "#approved-reviews-by>1"
+
+pull_request_rules:
+  - name: automerge to osmosis-main with label A:Automerge and branch protection passing
+    conditions:
+      - "#approved-reviews-by>1"
+      - base=osmosis-main
+      - label=A:Automerge
+    actions:
+      queue:
+        name: default
+        method: squash
+        commit_message_template: |
+          {{ title }} (#{{ number }})
+          {{ body }}
+
+  - name: backport patches to release/v0.42.x branch
+    conditions:
+      - base=osmosis-main
+      - label=A:backport/0.42.x
+    actions:
+      backport:
+        branches:
+          - release/v0.42.x
+
+  - name: backport patches to v0.42.9-osmo-v4 branch
+    conditions:
+      - base=osmosis-main
+      - label=A:backport/v0.42.9-osmo-v4
+    actions:
+      backport:
+        branches:
+          - v0.42.9-osmo-v4
+
+  - name: backport patches to v0.44.3x-osmo-v5 branch
+    conditions:
+      - base=osmosis-main
+      - label=A:backport/v0.44.3x-osmo-v5
+    actions:
+      backport:
+        branches:
+          - v0.44.3x-osmo-v5
+
+  - name: backport patches to v0.45.0x-osmo-v7 branch
+    conditions:
+      - base=osmosis-main
+      - label=A:backport/v0.45.0x-osmo-v7
+    actions:
+      backport:
+        branches:
+          - v0.45.0x-osmo-v7
+
+  - name: backport patches to v0.45.0x-osmo-v8 branch
+    conditions:
+      - base=osmosis-main
+      - label=A:backport/v0.45.0x-osmo-v8
+    actions:
+      backport:
+        branches:
+          - v0.45.0x-osmo-v8
+
+  - name: backport patches to v0.45.0x-osmo-v9 branch
+    conditions:
+      - base=osmosis-main
+      - label=A:backport/v0.45.0x-osmo-v9
+    actions:
+      backport:
+        branches:
+          - v0.45.0x-osmo-v9
+  - name: backport patches to v12.x branch
+    conditions:
+      - base=osmosis-main
+      - label=A:backport/v12.x
+    actions:
+      backport:
+        branches:
+          - v12.x
+  - name: backport patches to v13.x branch
+    conditions:
+      - base=osmosis-main
+      - label=A:backport/v13.x
+    actions:
+      backport:
+        branches:
+          - v13.x

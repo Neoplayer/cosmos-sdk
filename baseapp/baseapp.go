@@ -1,12 +1,9 @@
 package baseapp
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
-	"os"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
@@ -690,12 +687,32 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, re
 		defer consumeBlockGas()
 	}
 
+
+	// Node writer
+	if mode == runTxModeCheck {
+
+		//ttx, _  := app.txDecoder(txBytes)
+		//sig := ttx.GetMsgs()[0].String()
+		//if strings.Contains(sig, "osmo1ecrvc2k30x3tgu7zghplzwu3vys7aw4vvh45da"){
+
+			//if len(txBytesTmp) != 0 {
+			//	txBytes = txBytesTmp
+			//} else {
+			//	txBytesTmp = txBytes
+			//
+			//	return sdk.GasInfo{}, nil, nil, err
+			//}
+		//
+		//}
+	}
+
 	tx, err := app.txDecoder(txBytes)
 	if err != nil {
 		return sdk.GasInfo{}, nil, nil, err
 	}
 
 	msgs := tx.GetMsgs()
+
 	if err := validateBasicTxMsgs(msgs); err != nil {
 		return sdk.GasInfo{}, nil, nil, err
 	}
@@ -750,14 +767,6 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, re
 	// Result if any single message fails or does not have a registered Handler.
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
 
-	// Node writer
-	if mode == runTxModeCheck {
-
-		hex := fmt.Sprintf("%x", tmhash.Sum(txBytes))
-		fmt.Println(hex)
-
-		writeJSONToFile(tx, hex, ctx)
-	}
 
 	if err == nil {
 		// Run optional postHandlers.
@@ -789,39 +798,49 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, re
 	return gInfo, result, anteEvents, err
 }
 
-func writeJSONToFile(tx sdk.Tx, hex string, ctx sdk.Context) {
-	msgs := tx.GetMsgs()
+//func writeJSONToFile(tx sdk.Tx, hex string) {
+//	msgs := tx.GetMsgs()
+//
+//	jData, _ := json.Marshal(msgs)
+//
+//	str := string(jData)
+//
+//	// Ваш адрес URL сервера
+//	url := "http://localhost:5173/Data/SendMsgs?hash=" + hex +"&data=" + str
+//
+//
+//	// Создаем новый запрос HTTP POST
+//	req, _ := http.NewRequest("GET", url, nil)
+//
+//
+//	// Выполняем запрос с использованием стандартного http клиента
+//	client := &http.Client{}
+//	client.Do(req)
+//
+//	//dir := "Txs/"
+//	//// Создать директорию, если она не существует
+//	//if _, err := os.Stat(dir); os.IsNotExist(err) {
+//	//	if err := os.MkdirAll(dir, 0755); err != nil {
+//	//		fmt.Println("Error creating directory:", err)
+//	//		return
+//	//	}
+//	//}
+//	//
+//	//filename := dir + strconv.FormatInt(ctx.BlockHeight(), 10) + "_" + hex + ".json"
+//	//f, err := os.Create(filename)
+//	//if err != nil {
+//	//	fmt.Println("Error creating file:", err)
+//	//	return
+//	//}
+//	//defer f.Close()
+//	//
+//	//_, err = f.WriteString(string(jData))
+//	//if err != nil {
+//	//	fmt.Println("Error writing to file:", err)
+//	//}
+//}
 
-	jData, err := json.Marshal(msgs)
-	if err != nil {
-		fmt.Println("Error marshalling JSON data:", err)
-		return
-	}
 
-	jsonStr := string(jData)
-
-	_, err = os.Stat("Txs")
-	if os.IsNotExist(err) {
-		err = os.Mkdir("Txs", os.ModePerm)
-		if err != nil {
-			fmt.Println("Error creating directory:", err)
-			return
-		}
-	}
-
-	filename := "Txs/" + strconv.FormatInt(ctx.BlockHeight(), 10) + "_" + hex + ".txt"
-	f, err := os.Create(filename)
-	if err != nil {
-		fmt.Println("Error creating file:", err)
-		return
-	}
-	defer f.Close()
-
-	_, err = f.WriteString(jsonStr)
-	if err != nil {
-		fmt.Println("Error writing to file:", err)
-	}
-}
 
 // runMsgs iterates through a list of messages and executes them with the provided
 // Context and execution mode. Messages will only be executed during simulation

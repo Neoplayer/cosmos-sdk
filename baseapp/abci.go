@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -23,6 +24,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
+	"github.com/tendermint/tendermint/crypto/tmhash"
+	//cclient "github.com/cosmos/cosmos-sdk/client"
+	//clientTx "github.com/cosmos/cosmos-sdk/client/tx"
+	//authSign "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	//
+	//"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	//gamm "github.com/osmosis-labs/osmosis/v16/x/gamm/types"
+	//poolManagerTypes "github.com/osmosis-labs/osmosis/v16/x/poolmanager/types"
 )
 
 const initialAppVersion = 0
@@ -232,6 +242,31 @@ func (app *BaseApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBloc
 	return res
 }
 
+func (app *BaseApp) TTT(req abci.RequestCheckTx) [][]byte {
+	tx, _ := app.txDecoder(req.Tx)
+
+	bytesArray, err := msgsToProtoBytes(tx.GetMsgs())
+	if err != nil {
+		// Обработка ошибки
+	}
+
+	return bytesArray
+}
+
+func msgsToProtoBytes(msgs []sdk.Msg) ([][]byte, error) {
+	var bytesSlices [][]byte
+
+	for _, msg := range msgs {
+		b, err := proto.Marshal(msg)
+		if err != nil {
+			return nil, err
+		}
+		bytesSlices = append(bytesSlices, b)
+	}
+
+	return bytesSlices, nil
+}
+
 // CheckTx implements the ABCI interface and executes a tx in CheckTx mode. In
 // CheckTx mode, messages are not executed. This means messages are only validated
 // and only the AnteHandler is executed. State is persisted to the BaseApp's
@@ -254,6 +289,24 @@ func (app *BaseApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 		panic(fmt.Sprintf("unknown RequestCheckTx type: %s", req.Type))
 	}
 
+	// Node writer
+	if mode == runTxModeCheck {
+		currentTime := time.Now()
+		hex := fmt.Sprintf("%x", tmhash.Sum(req.Tx))
+		fmt.Println(hex, " | ", currentTime)
+
+		//tx, _ := app.txDecoder(req.Tx);
+		//
+		//sig := tx.GetMsgs()[0].String()
+		//if strings.Contains(sig, "osmo1c44v4uf2t4lyzs6wwc5cea6yzutead2pnnyfdy"){
+		//	// Проверка, заполнен ли срез байтов
+		//	fmt.Printf("fdf")
+		//
+		//}
+
+		//writeJSONToFile(tx, hex)
+	}
+
 	gInfo, result, anteEvents, err := app.runTx(mode, req.Tx)
 	if err != nil {
 		return sdkerrors.ResponseCheckTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, anteEvents, app.trace)
@@ -266,6 +319,85 @@ func (app *BaseApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 		Data:      result.Data,
 		Events:    sdk.MarkEventsToIndex(result.Events, app.indexEvents),
 	}
+}
+
+var client = &http.Client{}
+
+func writeJSONToFile(tx sdk.Tx, hex string) {
+	msgs := tx.GetMsgs()
+
+	//newTx := sdk.Tx(ttx.Tx{})
+	//
+	//ct := cclient.Context{}
+	//txCfg := ct.TxConfig
+	//txBuilder, err := txCfg.WrapTxBuilder(newTx)
+	//arr := []poolManagerTypes.SwapAmountInRoute { poolManagerTypes.SwapAmountInRoute{
+	//	PoolId: 1,
+	//	TokenOutDenom: "uosmo",
+	//}}
+	//
+	//msg := poolManagerTypes.MsgSwapExactAmountIn{
+	//	Sender: "",
+	//	Routes: arr,
+	//
+	//}
+	//
+	//txf := clientTx.Factory{}
+	//
+	//txBuilder, _ := clientTx.BuildUnsignedTx(txf, &msg)
+	//
+	//signerData := authSign.SignerData{
+	//	ChainID:       "osmosis-1",
+	//	AccountNumber: 1,
+	//	Sequence:      1,
+	//}
+	//
+	//key := secp256k1.PrivKey{
+	//	//Key:
+	//}
+
+	//interfaceRegistry := codecTypes.NewInterfaceRegistry()
+	//marshaler := codec.NewProtoCodec(interfaceRegistry)
+	//txCfg := authTx.NewTxConfig(marshaler, authTx.DefaultSignModes)
+
+	//clientTx.SignWithPrivKey(1, signerData, txBuilder, &key, nil, 1)
+
+	jData, _ := json.Marshal(msgs)
+
+	str := string(jData)
+
+	// Ваш адрес URL сервера
+	url := "http://localhost:5173/Data/SendMsgs?hash=" + hex + "&data=" + str
+
+	// Создаем новый запрос HTTP POST
+	req, _ := http.NewRequest("GET", url, nil)
+
+	// Выполняем запрос с использованием стандартного http клиента
+
+	client.Do(req)
+	//fmt.Printf(res.Status)
+
+	//dir := "Txs/"
+	//// Создать директорию, если она не существует
+	//if _, err := os.Stat(dir); os.IsNotExist(err) {
+	//	if err := os.MkdirAll(dir, 0755); err != nil {
+	//		fmt.Println("Error creating directory:", err)
+	//		return
+	//	}
+	//}
+	//
+	//filename := dir + strconv.FormatInt(ctx.BlockHeight(), 10) + "_" + hex + ".json"
+	//f, err := os.Create(filename)
+	//if err != nil {
+	//	fmt.Println("Error creating file:", err)
+	//	return
+	//}
+	//defer f.Close()
+	//
+	//_, err = f.WriteString(string(jData))
+	//if err != nil {
+	//	fmt.Println("Error writing to file:", err)
+	//}
 }
 
 // DeliverTx implements the ABCI interface and executes a tx in DeliverTx mode.

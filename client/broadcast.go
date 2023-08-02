@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"encoding/base64"
+
 	"github.com/tendermint/tendermint/mempool"
 	tmtypes "github.com/tendermint/tendermint/types"
 	"google.golang.org/grpc/codes"
@@ -112,6 +114,12 @@ func (ctx Context) BroadcastTxSync(txBytes []byte) (*sdk.TxResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	myString := string(txBytes[:])
+	fmt.Printf(myString)
+	str := base64.StdEncoding.EncodeToString(txBytes[:])
+	fmt.Println(str)
+
 
 	res, err := node.BroadcastTxSync(context.Background(), txBytes)
 	if errRes := CheckTendermintError(err, txBytes); errRes != nil {
